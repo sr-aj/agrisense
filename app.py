@@ -29,13 +29,20 @@ model_sustain = RandomForestRegressor().fit(X, y_sustain)
 # Market Score
 market_df['Seasonal_Factor'] = market_df['Seasonal_Factor'].map({'Low': 0, 'Medium': 1, 'High': 2})
 weights = {
-    'Market_Price': 0.25, 'Demand_Index': 0.20, 'Supply_Index': -0.15,
-    'Competitor_Factor': -0.10, 'Economic_Influence': 0.10,
-    'Weather_Impact': -0.05, 'Seasonal_Factor': 0.10, 'Consumer_Trend_Index': 0.15
+    'Demand_Index': 0.2,
+    'Supply_Index': 0.1,
+    'Market_Price_per_ton': 0.2,
+    'Competitor_Price_per_ton': 0.1,
+    'Economic_Indicator': 0.1,
+    'Weather_Impact_Score': 0.1,
+    'Seasonal_Factor': 0.1,
+    'Consumer_Trend_Index': 0.1
 }
+
 market_df['Profitability_Score'] = sum(
     market_df[col] * weight for col, weight in weights.items()
 )
+
 profitability_by_crop = market_df.groupby('Product')['Profitability_Score'].mean()
 
 # PDF generator
