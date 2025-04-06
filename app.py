@@ -7,6 +7,10 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from fpdf import FPDF
 import base64
+import sqlite3
+
+from database import setup_tables
+setup_tables()
 
 # Load datasets
 farmer_df = pd.read_csv('farmer_advisor_dataset.csv')
@@ -38,11 +42,9 @@ weights = {
     'Seasonal_Factor': 0.1,
     'Consumer_Trend_Index': 0.1
 }
-
 market_df['Profitability_Score'] = sum(
     market_df[col] * weight for col, weight in weights.items()
 )
-
 profitability_by_crop = market_df.groupby('Product')['Profitability_Score'].mean()
 
 # PDF generator
@@ -72,6 +74,24 @@ def generate_pdf(data):
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="AgroSense_Report.pdf">Download Report as PDF</a>'
     return href
 
+# Save to database
+def save_to_db(name, crop, yield_ton, score):
+    conn = sqlite3.connect("agrisense.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO farmer_history (name, crop, yield, sustainability_score)
+        VALUES (?, ?, ?, ?)
+    """, (name, crop, yield_ton, score))
+    conn.commit()
+    conn.close()
+
+# View history from database
+def view_history():
+    conn = sqlite3.connect("agrisense.db")
+    df = pd.read_sql_query("SELECT * FROM farmer_history", conn)
+    conn.close()
+    return df
+
 # UI
 st.set_page_config(page_title="AgroSense AI", layout="centered")
 st.markdown("""
@@ -84,7 +104,7 @@ st.markdown('<div class="title">AgroSense AI - Smart Crop Recommendation System<
 st.markdown('<div class="subtitle">Empowering farmers with AI-driven insights</div>', unsafe_allow_html=True)
 st.write("---")
 
-# Input fields
+# Inputs
 farmer_name = st.text_input("Enter Farmer's Name")
 crop_options = list(le_crop.classes_)
 crop_type = st.selectbox("Select Crop Type", crop_options)
@@ -96,7 +116,6 @@ fertilizer = st.slider("Fertilizer Usage (kg)", 0.0, 300.0, 150.0)
 pesticide = st.slider("Pesticide Usage (kg)", 0.0, 50.0, 10.0)
 
 compare_mode = st.checkbox("Compare all crops before deciding?")
-
 if compare_mode:
     st.subheader("Crop Profitability Comparison")
     market_avg = market_df.groupby('Product')['Profitability_Score'].mean().reset_index()
@@ -107,6 +126,7 @@ if compare_mode:
                        xaxis_tickangle=-45)
     st.plotly_chart(fig2)
 
+# Prediction & Recommendation
 if st.button("Predict & Recommend"):
     crop_encoded = le_crop.transform([crop_type])[0]
     input_data = np.array([[soil_ph, soil_moisture, temperature, rainfall,
@@ -122,6 +142,9 @@ if st.button("Predict & Recommend"):
     st.write(f"**Sustainability Score:** {pred_sustain:.2f}")
     st.write(f"**Profitability Score:** {market_score:.2f}")
     st.write(f"**Decision Confidence:** {confidence}")
+
+    # Save to DB
+    save_to_db(farmer_name, crop_type, pred_yield, pred_sustain)
 
     # Chart
     fig = go.Figure(data=[
@@ -148,6 +171,14 @@ if st.button("Predict & Recommend"):
     }
     pdf_link = generate_pdf(report_data)
     st.markdown(pdf_link, unsafe_allow_html=True)
+
+    # Show History
+    with st.expander("📜 View Past Recommendations"):
+        history_df = view_history()
+        if not history_df.empty:
+            st.dataframe(history_df)
+        else:
+            st.write("No records found yet.")
 
 # Footer
 st.markdown("""
