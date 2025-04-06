@@ -49,5 +49,7 @@ plotly
 fpdf
 
 **snapshot**
+![App Screenshot]![Screenshot 2025-04-06 210616](https://github.com/user-attachments/assets/6ec91471-5f7f-4051-b3d3-285341147669)
+
 
 
