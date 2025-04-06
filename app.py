@@ -68,7 +68,7 @@ def generate_pdf(data):
     pdf.set_y(-20)
     pdf.set_font("Arial", 'I', 10)
     pdf.set_text_color(150, 150, 150)
-    pdf.cell(0, 10, "Agrisense Report - Created by Sumit and Nilesh", 0, 0, 'C')
+    pdf.cell(0, 10, "Agrisense Report - Created by 2Noobs", 0, 0, 'C')
     pdf_output = pdf.output(dest='S').encode('latin1')
     b64 = base64.b64encode(pdf_output).decode()
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="AgroSense_Report.pdf">Download Report as PDF</a>'
